@@ -386,12 +386,23 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 	inventory = ./inventory.ini
 	remote_user = ubuntu
 	ask_pass = false
+	#log_path = /tmp/ansible.log
 
 	[privilege_escalation]
 	become = true
 	become_method = sudo
 	become_user = root
 	become_ask_pass = false
+
+	[ssh_connection]
+	ssh_args = -C -o ControlMaster=auto -o ControlPersist=120s
+	control_path_dir = ~/.ansible/cp
+	pipelining = True
+
+	[persistent_connection]
+	connect_timeout = 30
+	command_timeout = 30
+
 
 	[default] 섹션
 	    inventory: 인벤토리 파일의 위치 (기본: /etc/ansible/ansible.cfg)
@@ -445,6 +456,10 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 
     출력되는 내용이 많을 경우 필터 옵션 사용 가능 
     ansible all -m setup -a "filter=ansible_dist*"
+
+  * shell 실행 
+    ansible ... -m shell -a "<셸 명령줄>" ...
+    ansible all -m shell -a "uname -a"
 
 ########################################################
 ### Ansible 사용 예시 
