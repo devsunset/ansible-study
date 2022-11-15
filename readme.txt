@@ -289,6 +289,82 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 	atlanta
 	raleigh
 
+
+
+	* yaml 형식 설정
+	----------------------------------
+    all:
+	  hosts:
+	    webserver-host1:
+	    webserver-host2:
+	    dbserver-host[1:10]:
+	    10.1.3.2:
+
+	  children:
+	    webservers:
+	      hosts:
+	        webserver-host1:
+	          host_var: "local_var"
+	        webserver-host2:
+
+	    dbservers:
+	      hosts:
+	        dbserver-host[1:10]:
+	      vars:
+	        db_id: "admin"
+	        db_passwd: "passw@rd"
+
+	  vars:
+	    global_var: "server_name"
+
+
+	# 전역 변수
+	다음 값은 전역변수 입니다. 모든 서버에서 사용할 수 있는 변수값입니다.
+
+	  vars:
+	    global_var: "server_name"
+
+	# 그룹 변수
+	그룹에서 사용할 수 있는 변수값입니다. dbservers 그룹에서 다음의 변수들을 사용할 수 있습니다.
+	    dbservers:
+	      hosts:
+	        dbserver-host[1:10]:
+	      vars:
+	        db_id: "admin"
+	        db_passwd: "passw@rd"
+
+	# 호스트 변수
+	단일 호스트에서 사용할 수 있는 변수도 설정할 수 있습니다. webserver-host에서 host_var 변수를 사용할 수 있습니다. 
+	  children:
+	    webservers:
+	      hosts:
+	        webserver-host1:
+	          host_var: "local_var"
+
+
+	# 변수 타입
+	    문자열
+	    숫자
+	    불린(boolean)
+	    작업리스트
+	    딕셔너리(dict)
+
+	# 변수 예제
+	vars:
+	  string_var: "A"
+	  number_var: 1
+	  boolean_var: "yes"
+	  list_var:
+	    - A
+	    - B
+	    - C
+	  dict_var:
+	      key_a: "val_a"
+	      key_b: "val_b"
+	      key_c: "val_c"
+ 
+
+
 	* 설정 example 
 	----------------------------------
 	[all:vars]
@@ -406,6 +482,7 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 
 	[default] 섹션
 	    inventory: 인벤토리 파일의 위치 (기본: /etc/ansible/ansible.cfg)
+	    		   인벤토리 파일은 콤마를 이용하여 여러 개를 지정할 수 도 있음 
 	    remote_user: SSH 인증하기 위한 사용자 (기본: 현재 사용자)
 	    ask_pass: SSH 인증하기 위한 패스워드 요청/입력 여부 (기본: false)
 	 
@@ -443,7 +520,7 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
   호스트 패턴을 입력하고 -m 옵션 뒤에 사용할 모듈을 지정하며 [  ] 안에 있는 내용은 옵션
   -m 옵션으로 모듈을 지정하지 않을 경우 ansible 은 임의의 명령을 실행할 수 있는 모듈인 command 모듈을 사용
 
-  ansible host-pattern -m module [-a 'module options'] [-i inventory]
+  ansible host-pattern -m module [-a 'module options'] [-i inventory] [u -username]
 
   * ping module
     서버에서 python 모듈 실행 여부를 확인할 수 있는 ping 모듈 (TCP ping이 아님)
@@ -460,6 +537,12 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
   * shell 실행 
     ansible ... -m shell -a "<셸 명령줄>" ...
     ansible all -m shell -a "uname -a"
+
+
+
+# 모듈 
+  모듈은 단일 명령어 이자 수행할 작업
+
 
 ########################################################
 ### Ansible 사용 예시 
