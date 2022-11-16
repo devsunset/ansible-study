@@ -896,8 +896,282 @@ vars:
 	  when: "groups['hadoop_namenodes'] | length > 1"
 	  import_tasks: ./configure_hadoop_ha.yaml
 
+### playbook ###	  
+플레이북은 호스트와 태스크를 연결 
+
+# inventory.yaml의 호스트로 playbook.yaml을 실행
+ansible-playbook -i inventory.yaml playbook.yaml
+
+* inventory.yaml
+all:  
+  hosts:  
+    hue-server:  
+
+  children:  
+    hue:  
+      hosts:  
+        hue-server:
+
+* playbook.yaml
+- hosts: "hue"
+
+- name: download hue file
+  get_url:
+    url: "https://cdn.gethue.com/downloads/hue-4.10.0.tgz"
+    dest: /tmp
+    mode: '0660'
+
+- name: unarchive hue file
+  unarchive:
+    src: "/tmp/hue-4.10.0.tgz"
+    dest: "/opt"
+    remote_src: True
+    owner: "hue"
+    group: "hue"
+  become: True
+
+- name: "create symlink /opt/hue"
+  file:
+    src: "/opt/hue-4.10.0"
+    dest: /opt/hue
+    state: link
+    owner: "hue"
+    group: "hue"
+  become: yes        
 
 
+ # Role 
+   태스크(Task)를 묶어서 롤(Role)로 만들어 놓고 반복사용하는 형태로 구성
+   roles 폴더 내부에 있으면 자동으로 읽어서 사용
+
+   구성요소
+    files
+        정적 파일용 디렉토리
+    handlers
+        핸들러를 구성하는 디렉토리
+    meta
+        메타 정보를 가지는 파일 생성
+        작성자, 라이센스 등의 정보 추가
+    task
+        실제로 작업할 내용
+    templates
+        JinJa2 템플릿으로 변환하여 처리할 작업 파일
+        설정 파일 등
+    vars
+        변수 추가
+
+    ex)
+    - hosts: all
+	  roles:  
+	  # ----------- install ---------------  
+	    - role: "install/java"  
+	      when: java_installed.rc != 0  
+	      tags:  
+	        - master
+
+ # when 
+   특정 상황에서만 작업을 처리할 수 있게 하기 위해서 조건문을 이용	        
+   ex)pre_tasks로 하둡 설치 여부를 확인해서 hadoop fs 명령을 실행 	
+   	 pre_tasks:  
+	  - name: Check hadoop Installed  
+	    stat:  
+	      path: /usr/bin/hadoop
+	    register: hadoop_installed  
+
+	 tasks:
+	  - name: run ls
+	    shell: hadoop fs -ls hdfs:/// | wc -l
+	    register: hadoop_command_result
+	    when: hadoop_installed.stat.exists
+
+ # Tag 
+   플레이북은 태그를 이용하여 필요한 작업만 처리하거나, 제외할 수 있음
+   태그는 태스크, 플레이북, 롤 등 어디에나 추가 가능 
+
+   * 특수 태그
+    always
+        항상 실행
+    never
+        별도로 tag 명령을 실행해야 실행
+    tasks:
+	- debug:
+	    msg: "Always  runs"
+	  tags:
+	  - always
+
+
+	tasks:
+     - debug: msg="{{ showmevar }}"
+	    tags: [ never, debug ]
+
+	ex)
+	tasks:
+	- yum:
+	    name:
+	    - httpd
+	    - memcached
+	    state: present
+	  tags:
+	  - packages
+
+	- template:
+	    src: templates/src.j2
+	    dest: /etc/foo.conf
+	  tags:
+	  - configuration
+
+	roles:
+	  - role: webserver
+	    vars:
+	      port: 5000
+	    tags: [ web, foo ]
+
+
+	실행 
+	ansible-playbook example.yml --tags "configuration,packages"
+	ansible-playbook example.yml --skip-tags "packages"
+
+ # with_items 
+   동일한 작업을 여러번 반복하고 싶을 때 with_items 를 이용 리스트나 맵형식의 값을 이용하여 같은 작업을 반복
+
+   * 리스트 형식
+   ex) fileA, fileB를 /etc/hadoop/conf 아래로 복사
+	   - file:
+	    src: '{{ item }}'
+	    dest: '/etc/hadoop/conf/'
+	  with_items:
+	    - fileA
+	    - fileB
+
+   * 맵 형식
+   ex) 맵 형식의 데이터를 이용하여 반복 item의 키를 이용하여 값을 처리
+	   - file:
+	    src: '/opt/{{ item.src }}'
+	    dest: '{{ item.dest }}'
+	    state: link
+	  with_items:
+	    - { src: 'x', dest: 'y' }
+	    - { src: 'z', dest: 'k' }
+
+### variable ###
+플레이북에 변수가 설정된 파일이나 변수 정보를 전달할 수 있음 
+
+vars_files
+    변수가 선언된 파일
+vars
+    변수 선언
+
+ex)
+- name: test ping
+  hosts: all
+  vars_files:
+    - ../group_vars/common.yml
+  vars:
+    sample_files_path: /home/deploy/sample_files
+    id: sam
+
+* 특수변수 
+  https://docs.ansible.com/ansible/2.9/reference_appendices/special_variables.html
+  앤서블에는 기본적으로 선언된 특수 변수가 존재 
+  gather_facts명령으로 수집해야 하는 facts변수와 내부적으로 제공하는 magic 변수 
+
+  all:
+	  hosts:
+	    master-1:
+	    master-2:
+
+	  children:
+	    hadoop:
+	      hosts:
+	        master-1:
+
+	    zookeeper:
+	      hosts:
+	        master-2:
+
+	  vars:
+	    type: hadoop
+	    version: 3.2.1
+
+	Magic
+	    groups
+	        그룹 정보
+	        hadoop, zookeeper
+	    hostvars
+	        변수 정보
+	        type, version
+	    inventory_hostname
+	        현재 작업중인 호스트의 이름
+
+	    hotvars 는 선언된 변수에 접근할 수 있는 명령어
+	    ex)
+	    - name: "EXAMINE HOSTVARS OF SPINE DEVICES"
+		  hosts: "spine"
+		  gather_facts: "no"
+		  tasks:
+		    - name: "DEBUG HOSTVARS"
+		      debug:
+		        var: "hostvars"
+
+	Facts
+	    ansible_facts
+	    호스트의 설정 정보에 접근할 수 있는 명령어 
+	    gather_facts가 실행되어야만 정보를 확인할 수 있음 
+	    호스트의 OS 정보, IP 정보 등 운영체제 관련 정보를 확인
+	    ex)
+		- name: "check facts"
+		  hosts: "all"
+		  gather_facts: "yes"
+
+		  tasks:
+		    - debug:  
+		        msg: "{{ ansible_facts }}"
+
+
+	Connection variables
+	    ansible_host
+	        앤서블을 실행한 서버의 정보
+
+ * 필터 
+   변수의 기본 값, 변수 조작 등을 수행할 수 있는 함수
+
+   # version - version은 버전을 비교할 때 사용
+   ex)하둡 버전이 3.0.0 보다 낮은지를 비교
+    - debug:
+      msg: "{{ hadoop_version is version(\"3.0.0\", '<') }}"
+
+   # join - 리스트 형식의 변수를 모아서 반환 파이썬의 join 함수와 동일 
+   ex) {{ zk_server_ip | join(',') }}
+
+   # length - 리스트 형식의 길이를 반환
+   ex)
+  	{% if list | length > 2 %}
+	list 의 길이기 2 초과이면 처리 
+	{% else %}
+	list의 길이기 1이하이면 처리 
+	{% endif %}
+
+### 설정 ###
+앤서블은 설정 파일을 이용하여 기본값을 설정
+ansible.cfg 파일이 기본설정 파일
+
+앤서블이 해당 파일을 참조 순서
+1) ANSIBLE_CONFIG 환경변수로 지정된 파일
+2) ./ansible.cfg
+3) ~/.ansible.cfg
+4) /etc/ansible/ansible.cfg
+
+ex) ansible.cfg 
+[defaults]
+forks = 50 
+host_key_checking = False
+remote_user = deploy
+remote_port = 22
+
+forks: 한번에 처리하는 노드의 개수
+host_key_checking: 앤서블에 연결하는 호스트의 키 확인 여부
+remote_user: 서버에 접속하는 유저명
+remote_port: 서버에 접속하는 포트
 
 
 ########################################################
@@ -1083,8 +1357,43 @@ vars:
           - telnet
    -----------------------------------------------------
 
+# OS가 우분투인지 CentOS 인지 확인하고, 우분투의 버전이 18.04인지, 20.04인지 확인 후 
+  조건에 따른 mysql db setup 예시 
+  -----------------------------------------------------
+- name: Check os Name  
+  shell: cat /etc/os-release | egrep ^NAME | awk -F "=" '{ print $2 }' | sed s/\"//g  
+  register: os_name  
 
+- name: setup db  
+  apt:  
+    name: mysql-server  
+  become: yes  
+  when: not mysql_installed.stat.exists and os_name.stdout == "Ubuntu"  
 
+- name: "setup db"  
+  yum:  
+    name: mysql-server  
+  become: yes  
+  when: not mysql_installed.stat.exists and os_name.stdout == "CentOS Linux"  
+
+- name: Check os Version  
+  shell: cat /etc/os-release | grep VERSION_ID | awk -F "=" '{ print $2 }' | sed s/\"//g  
+  register: os_version  
+
+- name: mysql db cnf  
+  template:  
+    src: "my.cnf"  
+  dest: "/etc/mysql/my.cnf"  
+  become: yes  
+  when: os_version.stdout is version("18.04", '=')  
+
+- name: mysql db cnf  
+  template:  
+    src: "mysqld.cnf"  
+  dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"  
+  become: yes  
+  when: os_version.stdout is version("20.04", '=')
+  -----------------------------------------------------
 
 
 
