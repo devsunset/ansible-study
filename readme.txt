@@ -15,6 +15,7 @@ https://docs.ansible.com/ansible/2.9/index.html
 ### Reference
 
 https://www.redhat.com/ko/technologies/management/ansible/what-is-ansible
+https://www.redhat.com/ko/topics/automation/learning-ansible-tutorial
 
 https://wikidocs.net/book/6350
 
