@@ -82,10 +82,10 @@ Infrastructure as a code (환경의 배포와 구성을 규격화된 코드로 �
 
 		* ansible 의 모듈중 하나인 lineinfile 을 사용하면 파일에 특정 항목이 없으면 추가하고 다른 값이 있으면 변경
 		- name: Ensure SELinux is set to enforcing mode
-		  lineinfile:
-		    path: /etc/selinux/config
-		    regexp: '^SELINUX='
-		    line: SELINUX=enforcing
+		    lineinfile:
+		      path: /etc/selinux/config
+		      regexp: '^SELINUX='
+		      line: SELINUX=enforcing
 
 # 특징
 	1) Provisioning : 요구에 맞게 시스템 자원을 할당/배치 해두어 즉시 사용할 수 있는 상태로 준비
@@ -604,9 +604,9 @@ vars:
 	  when: hive_installed.stat.exists  
 	  become: yes  
 	  tags:  
-	    - stop
+    - stop
 	  environment:
-	      http_proxy: "http://proxy_host:proxy_port"
+	    http_proxy: "http://proxy_host:proxy_port"
 
   # file 
     디렉토리, 파일과 관련된 처리를 할 때 사용하는 모듈 복사, 삭제, 권한 변경 등을 처리
@@ -707,8 +707,8 @@ vars:
     - name: copy airflow configs  
 	  template:  
 	    src: "{{ item }}"  
-	   dest: "/opt/airflow/{{ item }}"  
-	  with_items:  
+	    dest: "/opt/airflow/{{ item }}"  
+	    with_items:  
 	    - airflow.cfg
 
 	* for 문 처리
@@ -744,12 +744,12 @@ vars:
     프록시 설정을 이용해야 하는 경우 environment 를 이용하여 설정
     ex)
     - name: download hive file  
-	  get_url:  
-	    url: "http://file-url/hive.tgz"
-	    dest: /home/user/hive.tgz
-	    mode: '0660'
-	  environment:  
-	    https_proxy: http://proxy_url:proxy_port
+	    get_url:  
+	      url: "http://file-url/hive.tgz"
+	      dest: /home/user/hive.tgz
+	      mode: '0660'
+	    environment:  
+	      https_proxy: http://proxy_url:proxy_port
 
   # stat 
     stat은 파일의 상태를 확인 register를 이용해서 파일 파이즈, 존재 여부, 권한 등의 상태를 확인하고 다음 처리에 이용
@@ -761,11 +761,11 @@ vars:
 		  register: st  
 
 		- name: download file.txt
-		  get_url:  
-		    url: "http://file.txt"  
-		  dest: /home/user
-		    mode: '0660'  
-		  when: "st.stat.size = 0 | int"
+		    get_url:  
+		      url: "http://file.txt"  
+		    dest: /home/user
+		      mode: '0660'  
+		    when: "st.stat.size = 0 | int"
 
   # shell 
     쉘 명령어를 실행
@@ -774,33 +774,33 @@ vars:
       ex)
       	# mysql 명령어를 이용하여 쿼리를 실행 
 		- name: execute drop_db query  
-		  shell: |  
-		    mysql -u root < /tmp/drop_db.sql  
-		  become: yes
+		    shell: |  
+		      mysql -u root < /tmp/drop_db.sql  
+		    become: yes
 
 		# airflow-start.sh 스크립트를 실행 
 		# when: 을 이용하여 조건문을 처리 
 		- name: airflow start  
-		  shell: /opt/airflow/bin/airflow-start.sh all  
-		  when: airflow_installed.stat.exists
+		    shell: /opt/airflow/bin/airflow-start.sh all  
+		    when: airflow_installed.stat.exists
 
 	 * 명령어 실행 결과 반환
 	   register를 이용하여 명령어 실행 결과를 저장
 	   ex)
 	    # OS 이름을 저장합니다. 
 		- name: Check os Name  
-		  shell: cat /etc/os-release | egrep ^NAME | awk -F "=" '{ print $2 }' | sed s/\"//g  
-		  register: os_name
+		    shell: cat /etc/os-release | egrep ^NAME | awk -F "=" '{ print $2 }' | sed s/\"//g  
+		    register: os_name
 
      * 멀티라인 명령어
        |를 이용하여 여러 명령어를 한번에 실행
        ex)
       	# systemctl 명령어를 실행 
 		- name: "service systemctl"  
-		  shell: |  
-		    systemctl daemon-reload  
-		    systemctl enable mysql  
-		  become: yes
+		    shell: |  
+		      systemctl daemon-reload  
+		      systemctl enable mysql  
+		    become: yes
 
   # apt 
     우분투의 apt 설치 명령어를 실행
@@ -809,19 +809,19 @@ vars:
       ex)
       	# 마리아 db 서버 설치 
 		- name: setup db  
-		  apt:  
-		    name: mariadb-server  
-		  become: yes
+		    apt:  
+		      name: mariadb-server  
+		    become: yes
 
     * 제거
       state: absent 옵션을 이용하여 제거
       ex)
       	# 마리아 db 서버 제거 
 		- name: delete db  
-		  apt:  
-		    name: mariadb-server  
-		    state: absent
-		  become: yes
+		    apt:  
+		      name: mariadb-server  
+		      state: absent
+		    become: yes
 
 	* 업데이트 및 설치
 	  update_cache: yes 를 이용하여 apt를 업데이트 하면서 패키지를 설치
@@ -1783,86 +1783,88 @@ remote_port: 서버에 접속하는 포트
 2) playbook.yaml 작성
    vi playbook.yaml
    -----------------------------------------------------
-- name: set up
-  hosts: prod
-  become_user: root
-  become: yes
-  tasks:
+---   
+	- name: set up
+	  hosts: prod
+	  become_user: root
+	  become: yes
+	  tasks:
 
-   - name: add user
-     user:
-      name: security_temp
-      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
-   - name: modify visudo
-     lineinfile:
-      path: /etc/sudoers
-      insertafter: '^root*'
-      state: present
-      line: "security_temp\tALL=(ALL)\tALL"
-      validate: 'visudo -cf %s'
-   - name: modify sshd_config
-     replace:
-      path: /etc/ssh/sshd_config
-      regexp: 'PasswordAuthentication no'
-      replace: 'PasswordAuthentication yes'
-   - name: restart sshd
-     service:
-      name: sshd
-      state: restarted
+	   - name: add user
+	     user:
+	      name: security_temp
+	      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
+	   - name: modify visudo
+	     lineinfile:
+	      path: /etc/sudoers
+	      insertafter: '^root*'
+	      state: present
+	      line: "security_temp\tALL=(ALL)\tALL"
+	      validate: 'visudo -cf %s'
+	   - name: modify sshd_config
+	     replace:
+	      path: /etc/ssh/sshd_config
+	      regexp: 'PasswordAuthentication no'
+	      replace: 'PasswordAuthentication yes'
+	   - name: restart sshd
+	     service:
+	      name: sshd
+	      state: restarted
 
-- name: set up
-  hosts: dev
-  become_user: root
-  become: yes
-  tasks:
+	- name: set up
+	  hosts: dev
+	  become_user: root
+	  become: yes
+	  tasks:
 
-   - name: add user
-     user:
-      name: security_temp
-      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
-   - name: modify visudo
-     lineinfile:
-      path: /etc/sudoers
-      insertafter: '^root*'
-      state: present
-      line: "security_temp\tALL=(ALL)\tALL"
-      validate: 'visudo -cf %s'
-   - name: modify sshd_config
-     replace:
-      path: /etc/ssh/sshd_config
-      regexp: 'PasswordAuthentication no'
-      replace: 'PasswordAuthentication yes'
-   - name: restart sshd
-     service:
-      name: sshd
-      state: restarted
+	   - name: add user
+	     user:
+	      name: security_temp
+	      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
+	   - name: modify visudo
+	     lineinfile:
+	      path: /etc/sudoers
+	      insertafter: '^root*'
+	      state: present
+	      line: "security_temp\tALL=(ALL)\tALL"
+	      validate: 'visudo -cf %s'
+	   - name: modify sshd_config
+	     replace:
+	      path: /etc/ssh/sshd_config
+	      regexp: 'PasswordAuthentication no'
+	      replace: 'PasswordAuthentication yes'
+	   - name: restart sshd
+	     service:
+	      name: sshd
+	      state: restarted
 
-- name: set up
-  hosts: stg
-  become_user: root
-  become: yes
-  tasks:
+	- name: set up
+	  hosts: stg
+	  become_user: root
+	  become: yes
+	  tasks:
 
-   - name: add user
-     user:
-      name: security_temp
-      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
-   - name: modify visudo
-     lineinfile:
-      path: /etc/sudoers
-      insertafter: '^root*'
-      state: present
-      line: "security_temp\tALL=(ALL)\tALL"
-      validate: 'visudo -cf %s'
-   - name: modify sshd_config
-     replace:
-      path: /etc/ssh/sshd_config
-      regexp: 'PasswordAuthentication no'
-      replace: 'PasswordAuthentication yes'
-   - name: restart sshd
-     service:
-      name: sshd
-      state: restarted
+	   - name: add user
+	     user:
+	      name: security_temp
+	      password: $6$keA0jbN9oNtWT0UE$neES8QAPl2X64ZIEt6VHBxvCxsOuUXL/PXhCV1bTTGkdCED6NZO6A4mx6xAcAnYPI1ESn4yi9PSIjB25XvU.O.
+	   - name: modify visudo
+	     lineinfile:
+	      path: /etc/sudoers
+	      insertafter: '^root*'
+	      state: present
+	      line: "security_temp\tALL=(ALL)\tALL"
+	      validate: 'visudo -cf %s'
+	   - name: modify sshd_config
+	     replace:
+	      path: /etc/ssh/sshd_config
+	      regexp: 'PasswordAuthentication no'
+	      replace: 'PasswordAuthentication yes'
+	   - name: restart sshd
+	     service:
+	      name: sshd
+	      state: restarted
+...      
    -----------------------------------------------------
 
    # User의 Password는 아래와 같이 암호화를 해야함. (python3.6 version으로 암호화)
@@ -1919,6 +1921,7 @@ remote_port: 서버에 접속하는 포트
 # OS가 우분투인지 CentOS 인지 확인하고, 우분투의 버전이 18.04인지, 20.04인지 확인 후 
   조건에 따른 mysql db setup 예시 
   -----------------------------------------------------
+---
 - name: Check os Name  
   shell: cat /etc/os-release | egrep ^NAME | awk -F "=" '{ print $2 }' | sed s/\"//g  
   register: os_name  
@@ -1952,6 +1955,7 @@ remote_port: 서버에 접속하는 포트
   dest: "/etc/mysql/mysql.conf.d/mysqld.cnf"  
   become: yes  
   when: os_version.stdout is version("20.04", '=')
+...    
   -----------------------------------------------------
 
 * 패스워드 없이 수행하기 위해 앤서블 서버와 노드사이의 인증 생성
@@ -1993,5 +1997,32 @@ tasks:
       user: <유저이름>
       state: present
       key: ""
+...      
 -----------------------------------------------------
 
+# ping test
+---
+-  name: ping test
+   hosts: all
+   gather_facts: false
+   tasks:
+   - name: ping
+     ping:
+...
+
+# create directory & touch file
+---
+- name: touch files test
+  hosts: all
+  gather_facts: false
+  tasks:
+  - name: create directory
+    file:
+      path: /home/ubuntu/ansible
+      state: directory
+ 
+  - name: touch filens
+    file:
+      path: /home/ubuntu/ansible/ansible.txt
+      state: touch
+...
