@@ -862,6 +862,36 @@ vars:
 	      msg: "Success - Java is installed  {{ java_result.stdout }}"
 	    when:  java_result is success
 
+  # user
+	사용자 추가
+	ansible ... -m user -"name=<사용자 이름>" -k
+
+	마지막 추가된 사용자 확인
+	ansible ... -a "tail -n 1 /etc/passwd" -k
+
+	사용자 제거
+	ansible ... -m user - "name=<사용자 이름> state=absent" -k
+
+
+  # package
+	패키지 설치
+	ansible ... -m <yum> -a "name=httpd state=present" -k
+	ansible ... -m <apt> -a "pkg=httpd update_cache=yes state=present" -k
+
+	패키지 제거
+	ansible ... -m <yum> -a "name=httpd state=absent" -k
+	ansible ... -m <apt> -a "name=httpd autoremove=yes state=absent" -k
+
+  # service
+    서비스 시작, 중지, 재시작.
+	ansible ... -m service -a "name=<서비스 이름> state=<상태>"
+
+	서비스 상태
+	    started: 시작
+	    stop: 중지
+	    restarted: 재시작
+
+
 ### task ###
 태스크는 모듈의 모음 연속된 동작으로 진행할 작업을 정의 
   ex) hue 4.10.0 버전의 압축 파일을 다운로드 하고, 압축을 해제한 후, 링크를 거는 태스크
@@ -898,6 +928,23 @@ vars:
 
 ### playbook ###	  
 플레이북은 호스트와 태스크를 연결 
+
+    앤서블 애드혹은 1회성이다.
+    앤서블 플레이북은 YAML로 작성한다.
+    반복적으로 사용가능하다.
+    플레이북 자체가 문서다.
+
+ansible-playbook <앤서플 플레이북 파일.yml> -k
+
+--- # 첫줄은 반드시 ---로 시작해야 한다.
+- name: <이 플레이북에 대한 설명>
+  hosts: <호스트 지정>
+  gather_facts: <yes 또는 no> 
+  become: <아래 작업들에 대해 수퍼 유저 권한을 사용하려면 yes 아니면 no>
+  
+  tasks:
+    <이하 작업 내용들 기술>
+
 
 # inventory.yaml의 호스트로 playbook.yaml을 실행
 ansible-playbook -i inventory.yaml playbook.yaml
@@ -1053,6 +1100,521 @@ all:
 	    - { src: 'x', dest: 'y' }
 	    - { src: 'z', dest: 'k' }
 
+
+## playbook usage ##
+
+* facts를 수집하여 json으로 저장
+---
+- name: <이름>
+  hosts: <노드>
+  
+tasks:
+  - name: <이름>
+    setup:
+    register: facts
+    
+  - name: save facts
+    local_action:
+      module: copy
+      content: ""
+      dest: ./_facts_by_collector.txt
+
+* facts를 출력
+  - name: debug by msg
+    debug:
+      msg:
+        - "eth0's ip "
+        - "eth1's ip "
+
+* 작업 include
+---
+- name: <이름>
+  hosts: <노드들>
+  become: yes
+  taks:
+    - include_taks: <서브 작업 파일>
+
+* 조건에 의한 작업 수행:
+tasks:
+  - name: <이름>
+    <뭔가 함>
+    when: ansible_distribution == 'CentOS'
+    또는
+    when: ansible_distribution == 'Ubuntu'
+
+* 배포판 조건에 의한 작업 include
+---
+- name: <이름>
+  hosts: <노드>
+  vars:
+    linux_distribution: "centos
+                       else 'ubuntu' if ansible_distribution == 'Ubuntu'
+                       else 'unknown' }}"
+  
+tasks:
+  - name: <이름>
+    include_tasks: ".yml"
+    
+* 유저 전환
+수퍼 유저로 전환
+  tasks:
+    - name: <이름>
+      become: <수퍼 유저 권한을 사용하려면 yes 아니면 no>
+
+지정한 유저로 전환
+  tasks:
+    - name: <이름>
+      become: <유저 권한을 사용하려면 yes 아니면 no>
+      become_user: <유저 이름>
+    
+* 셸명령 실행
+  tasks:
+    - name: <이름>
+      shell: ""
+      with_items:
+        - "<명령줄 1>"
+        - "<명령줄 2>"
+        - ...
+      
+* 텍스트 파일 멱등성 라인 추가
+  tasks:
+    - name: <이름>
+      lineinfile:
+        path: <파일경로>
+        line: ""
+      with_items:
+        - "<라인 1>"
+        - "<라인 2>"
+        - ...
+
+* 파일 내에서 검색하여 치환
+  tasks:
+    - name: <이름>
+      replace:
+        path: <파일경로>
+        regexp: <검색할 정규식>
+        replace: <치환할 텍스트>
+
+* 다수의 검색어 치환
+  tasks:
+    - name: <이름>
+      replace:
+        path: ""
+        regexp: ""
+        replace: ""
+      with_items:
+        - { path: "<경로1>", regexp: "<검색 정규식1>", replace: "치환문자열1" }
+        - { path: "<경로2>", regexp: "<검색 정규식2>", replace: "치환문자열2" }
+
+* 호스트 추가
+  tasks:
+    - name: <이름>
+      blockinfile:
+        path: /etc/ansible/hosts
+        block: |
+          [<그룹 이름>]
+          <호스트1>
+          <호스트2>
+          ...
+          <호스트n-1>
+          <호스트n>
+
+* SSH 키 생성
+  tasks:
+    - name: <이름>
+      become: yes
+      become_user: <유저이름>
+      shell: ""
+      with_items:
+        - "ssh-keyscan <IP주소> >> ~/.ssh/known_hosts"
+        - "ssh-keyscan <IP주소> >> ~/.ssh/known_hosts"
+        ...
+        - "ssh-keyscan <IP주소> >> ~/.ssh/known_hosts"
+        - "ssh-keyscan <IP주소> >> ~/.ssh/known_hosts"
+          
+* 패키지 설치
+레드헷:
+  tasks:
+    - name: <이름>
+      yum:
+        name: <패키지 이름>
+        status: <present 또는 latest>
+
+레드헷 다수의 패키지 설치:
+  tasks:
+    - name: <이름>
+      yum:
+        name: " "
+        status: <present 또는 latest>
+        update_cache: true
+      with_items:
+        - "<패키지 이름 1>"
+        - "<패키지 이름 2>"
+        - ...
+        - "<패키지 이름 n-1>"
+        - "<패키지 이름 n>"
+
+우분투:
+  tasks:
+    - name: <이름>
+      apt:
+        pkg: ""
+        state: <present 또는 latest>          
+        update_cache: true
+      with_items:
+        - "<패키지 이름 1>"
+        - "<패키지 이름 2>"
+        - ...
+        - "<패키지 이름 n-1>"
+        - "<패키지 이름 n>"
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_chocolatey:
+        name: <패키지 이름>
+
+공통:
+  tasks:
+    - name: <이름>
+      action: " name=<패키지이름> state=<present 또는 latest>"
+
+진행 상태 표시 패키지 설치:
+  tasks
+    - name: Install ...
+      become: yes
+      apt:
+        name: <package-name>
+      async: 1000
+      poll: 0
+      register: apt_sleeper
+
+   - name: 'apt - check on async task'
+     async_status:
+       jid: ""
+     register: job_result
+     until: job_result.finished
+     retries: 1000
+
+* 패키지 제거
+레드햇:
+  tasks:
+    - name: <이름>
+      yum:
+        name: <패키지 이름>
+        status: absent
+
+우분투:
+  tasks:
+    - name: <이름>
+      apt:
+        pkg: <패키지 이름>
+        status: absent
+        autoremove: yes
+
+공통:
+  tasks:
+    - name: <이름>
+      action: " name=<패키지이름> state=absent"
+
+* Docker 우분투 gpg 키 등록
+  tasks:
+    - name: Add docker apt signing key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      
+* git 저장소 클론
+  tasks:
+    - name: <이름>
+      git:
+        repo: <git 저장소 URL>
+        dest: <로컬 컴퓨터의 경로>
+
+* cmake로 빌드
+  tasks:
+    - name: <이름>
+      cmake:
+        binary_dir: <빌드 디렉토리, 필수>
+        source_dir: <소스 디렉토리>
+        build_type: <빌드 타입, 기본 Debug>
+        target: <빌드 타겟>
+        cache_vars: <캐시 변수>
+
+* .bashrc 구성
+  tasks:
+    - name: <이름>
+      lineinfile:
+        path: /home/.../.bashrc
+        line: "
+      with_items:
+        - "..."
+        - "..."
+
+* 앤서블 서버에서 노드로 파일 복사하기
+  tasks:
+    - name: <이름>
+      copy:
+        src: "<앤서블 서버에서 원본 파일 경로>"
+        dest: "<앤서블 노드에서 대상 파일 경로>"
+        owner: <파일 소유 유저 지정>
+        group: <파일 그룹 지정>
+        mode: <파일 권한 지정>
+        
+* 앤서블 노드에서 앤서블 서버로 파일 복사해오기
+  tasks:
+    - name: <이름>
+      fetch:
+        src: "<앤서블 노드에서 원본 파일 경로>"
+        dest: "<앤서블 서버에서 대상 파일 경로>"
+
+  다수의 앤서블 노드에서 파일을 복사해 오므로 <dest 경로>/<앤서블 노드 이름>/<src 경로> 폴더에 저장 
+     
+  경로 단순화 : flat을 true로 지정하여 앤서블 노드의 경로를 제거 
+    tasks:
+    - name: <이름>
+      fetch:
+        src: "<앤서블 노드에서 원본 파일 경로>"
+        dest: "<앤서블 서버에서 대상 디렉토리>/-파일명.확장자"
+        flat: true
+
+* 파일 내용 표시
+  tasks:
+    - name: <이름>
+      debug:
+        var: item
+      with_file:
+        - "<앤서블 노드에서 파일 경로 1>"
+        - "<앤서블 노드에서 파일 경로 2>"
+        ...
+
+* 디렉토리 만들기
+리눅스:
+  tasks:
+    - name: <이름>
+      file:
+        state: directory
+        path: <만들 디렉토리 경로>
+        recurse: <기본값은 no이며 깊은 디렉토리를 만드러면 yes를 지정>
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_file:
+        state: directory
+        path: <만들 디렉토리 경로>
+        recurse: <기본값은 no이며 깊은 디렉토리를 만드러면 yes를 지정>
+
+* 다수의 디렉토리 만들기
+ /tmp 폴더에 test-00 부터 test-99까지 100개의 하위 디렉토리를 만든다.
+
+  tasks:
+    - name: <이름>
+      file:
+        state: directory
+        path: "/tmp/test-"
+        recurse: <기본값은 no이며 깊은 디렉토리를 만드러면 yes를 지정>
+      with_sequence:
+        start: 0
+        end: 99
+        format: %02d
+
+ /tmp 폴더에 지정한 다수의 디렉토리를 만든다.
+  tasks:
+    - name: <이름>
+      file:
+        state: directory
+        path: "/tmp/test-"
+        recurse: <기본값은 no이며 깊은 디렉토리를 만드러면 yes를 지정>
+      with_items:
+        - foo
+        - bar
+        - baz
+
+* 심볼릭 링크 만들기
+  tasks:
+    - name: <이름>
+      file:
+        state: link다
+        src: <원본 경로>
+        path: <심볼링 링크 경로>
+
+* 셸에서 디렉토리 만들기
+  tasks:
+    - name: <이름>
+      shell: ""
+      with_items:
+        - "mkdir -p <생성할 디렉토리 이름>"
+        
+* 파일 삭제
+  tasks:
+    - name: <이름>
+      file:
+        state: absent
+        path: <앤서블 노드에서 파일 경로>
+
+* 디렉토리 보기
+  tasks:
+    - name: <이름>
+      command: ls -lht <경로>
+      register: <결과를 저장할 변수명>
+    - name: <이름>
+      debug:
+        msg: ""
+        
+* URL을 통해 파일 가져오기
+리눅스:
+  tasks:
+    - name: <이름>
+      get_url:
+        url: "<원본 URL>"
+        dest: "<대상 로컬 경로>"
+        mode: <파일 권한 지정>
+
+리눅스 파일 권한:
+    0<owner><group><other> 순서로 지정.
+    r: 4, w: 2, x: 1
+    읽고 쓰고 실행 가능: 7
+    읽기만 가능: 4
+    읽고 쓰기만 가능: 6
+    읽고 실행만 가능: 5
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_get_url:
+        url: "<원본 URL>"
+        dest: "<대상 로컬 경로>"
+        
+* 윈도우 서비스 등록
+    먼저 nssm이 설치되어 있어야 한다.
+  tasks:https://kim-dragon.tistory.com/53
+    - name: <이름>
+      win_nssm:
+        name: <애플리케이션 이름>
+        application: <애플리케이션 실행파일 경로>
+        state: present
+
+* 타임존 변경
+리눅스:
+tasks:
+    - name: <이름>
+      timezone:
+        name: Aisa/Seoul
+
+리눅스 타임존 목록:
+timedatectl list-timezones
+
+윈도우:
+tasks:
+    - name: <이름>
+      win_timezone:
+        timezone: 'Korea Standard Time'
+        
+* 마운트
+리눅스:
+  tasks:
+    - name: <이름>
+      become: yes
+      mount:
+        path: <마운트 할 대상 경로>
+        src: <마운트 할 소스 경로>
+        fstype: <파일 시스템 타입>
+        opts: <파일 시스템 옵션>
+        state: mounted
+
+윈도우 NFS 마운트:
+  tasks:
+    - name: <설명 1>
+      win_feature:
+        name: NFS-Client
+        state: present
+    - name: <설명 2>
+      win_command: net use "드라이브 문자:" "NFS 경로"
+
+* 파일 압축 풀기
+윈도우:
+  tasks:
+    - name: <이름>
+      win_unzip:
+        src: <압축된 파일 소스 경로>
+        dst: <풀어진 파일 저장 경로>
+        delete_archive: <압축 파일을 삭제하려면 yes 아니면 no>
+
+* 서비스 시작
+리눅스:
+  tasks:
+    - name: <이름>
+      service:
+        name: <서비스 이름>
+        state: started
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_service:
+        name: <서비스 이름>
+        state: started
+        
+* 서비스 중지
+리눅스:
+  tasks:
+    - name: <이름>
+      service:
+        name: <서비스 이름>
+        state: stop
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_service:
+        name: <서비스 이름>
+        state: stop
+
+* 서비스 재시작
+리눅스:
+  tasks:
+    - name: <이름>
+      service:
+        name: <서비스 이름>
+        state: restarted
+
+윈도우:
+  tasks:
+    - name: <이름>
+      win_service:
+        name: <서비스 이름>
+        state: restarted
+        
+* 리부팅
+윈도우:
+  tasks:
+    - name: <이름>
+      win_reboot:
+
+* 서비스 데몬 재시작
+  tasks:
+    - name: <이름>
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: tftp
+
+* 핸들러
+    전 단계가 정상적으로 이루어진 경우에 동작
+    변경 사항이 발생한 경우에만 동작
+
+핸들러:
+handlers:
+  - name: <핸들러 이름>
+    <Do something>
+
+핸들러 실행을 요청:
+- name: <이름>
+  <Do something>
+  notify: <핸들러 이름>
+        
+       
 ### variable ###
 플레이북에 변수가 설정된 파일이나 변수 정보를 전달할 수 있음 
 
@@ -1077,10 +1639,7 @@ ex)
 
   all:
 	  hosts:
-	    master-1:
-	    master-2:
-
-	  children:
+	en:
 	    hadoop:
 	      hosts:
 	        master-1:
@@ -1395,5 +1954,44 @@ remote_port: 서버에 접속하는 포트
   when: os_version.stdout is version("20.04", '=')
   -----------------------------------------------------
 
+* 패스워드 없이 수행하기 위해 앤서블 서버와 노드사이의 인증 생성
+-----------------------------------------------------
+---
+- name: Create known_hosts between server and hosts
+  host: nodes
+  connection: local
+  serial: 1
 
+tasks:
+  - name: ssh-keyscan for known_hosts file
+    command: /usr/bin/ssh-keyscan -t ecdsa 
+    register: keyscan
+    
+  - name: input key
+    lineinfile:
+      path: ~/.ssh/known_hosts
+      line: ""
+      create: yes
+    with_item:
+      - ""
+      
+- name: Create authority_key between server and hosts
+  host: nodes
+  connection: local
+  gather_facts: no
+  vars:
+    ansible_password: <비밀번호>   
+      
+  - name: ssh-keygen for authorized_key file
+    command: "ssh-keygen -b 2048 -t rsa -f ~/ssh/id_rsa -q -N ''"
+    ignore_errors: yes
+    run_once: true
+    
+  - name: input key for each node
+    connection: ssh
+    authorized_key:
+      user: <유저이름>
+      state: present
+      key: ""
+-----------------------------------------------------
 
