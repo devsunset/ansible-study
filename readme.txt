@@ -289,8 +289,6 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 	atlanta
 	raleigh
 
-
-
 	* yaml 형식 설정
 	----------------------------------
     all:
@@ -317,54 +315,7 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 	  vars:
 	    global_var: "server_name"
 
-
-	# 전역 변수
-	다음 값은 전역변수 입니다. 모든 서버에서 사용할 수 있는 변수값입니다.
-
-	  vars:
-	    global_var: "server_name"
-
-	# 그룹 변수
-	그룹에서 사용할 수 있는 변수값입니다. dbservers 그룹에서 다음의 변수들을 사용할 수 있습니다.
-	    dbservers:
-	      hosts:
-	        dbserver-host[1:10]:
-	      vars:
-	        db_id: "admin"
-	        db_passwd: "passw@rd"
-
-	# 호스트 변수
-	단일 호스트에서 사용할 수 있는 변수도 설정할 수 있습니다. webserver-host에서 host_var 변수를 사용할 수 있습니다. 
-	  children:
-	    webservers:
-	      hosts:
-	        webserver-host1:
-	          host_var: "local_var"
-
-
-	# 변수 타입
-	    문자열
-	    숫자
-	    불린(boolean)
-	    작업리스트
-	    딕셔너리(dict)
-
-	# 변수 예제
-	vars:
-	  string_var: "A"
-	  number_var: 1
-	  boolean_var: "yes"
-	  list_var:
-	    - A
-	    - B
-	    - C
-	  dict_var:
-	      key_a: "val_a"
-	      key_b: "val_b"
-	      key_c: "val_c"
  
-
-
 	* 설정 example 
 	----------------------------------
 	[all:vars]
@@ -425,7 +376,7 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
 	redis2
 	redis3
 
-	* real setting
+	* ssh key파일 연결 설정 example
 	----------------------------------
 	[dev:vars]
 	ansible_ssh_user=ubuntu
@@ -539,9 +490,414 @@ Ansible 은 agent 가 없으므로 설치가 매우 간단하며 ansible 스크�
     ansible all -m shell -a "uname -a"
 
 
+### inventory ###
+인벤토리는 앤서블을 이용하여 작업을 진행할 서버의 정보와 작업에 사용할 변수 정보를 저장
+ini 파일과 yaml 파일로 설정할 수 있음 
 
-# 모듈 
-  모듈은 단일 명령어 이자 수행할 작업
+all 에는 모든 호스트의 정보를 추가
+children에는 그룹별 호스트 정보를 추가
+    그룹은 작업 단위별로 설정하는 것이 좋음
+    db 서버 모음, 웹 서버 모음과 같은 형태
+dbserver-host[1:10]과 같은 형태로 1~10 번까지의 호스트 설정 가능
+10.1.3.2와 같은 형태로 IP를 직접적으로 설정하는 것도 가능
+
+
+ # ini 파일
+ 	mail.example.com
+
+	[webservers]
+	foo.example.com 
+	bar.example.com
+
+	[dbservers]
+	one.example.com
+	two.example.com
+	three.example.com
+ 
+# yaml 파일
+	all:
+	  hosts:
+	    mail.example.com:
+	  children:
+	    webservers:
+	      hosts:
+	        foo.example.com:
+	        bar.example.com:
+	    dbservers:
+	      hosts:
+	        one.example.com:
+	        two.example.com:
+	        three.example.com:
+
+# 파라미터 전달
+  -i 옵션으로 인벤토리 파일을 지정 할 수 있음 
+  ansible-playbook -i inventory.yaml
+
+# cfg 파일 설정
+  cfg 파일에 inventory 옵션에 파일 경로를 지정, 인벤토리 파일은 콤마를 이용하여 여러 개를 지정
+  [default]
+  inventory = inventory.yaml,common.yaml
+
+
+# 변수 타입
+    문자열
+    숫자
+    불린(boolean)
+    작업리스트
+    딕셔너리(dict)
+
+# 변수 예제
+vars:
+  string_var: "A"
+  number_var: 1
+  boolean_var: "yes"
+  list_var:
+    - A
+    - B
+    - C
+  dict_var:
+      key_a: "val_a"
+      key_b: "val_b"
+      key_c: "val_c"
+
+# 전역 변수
+  다음 값은 전역변수 입니다. 모든 서버에서 사용할 수 있는 변수값입니다.
+  vars:
+    global_var: "server_name"
+
+# 그룹 변수
+  그룹에서 사용할 수 있는 변수값입니다. dbservers 그룹에서 다음의 변수들을 사용할 수 있습니다.
+    dbservers:
+      hosts:
+        dbserver-host[1:10]:
+      vars:
+        db_id: "admin"
+        db_passwd: "passw@rd"
+
+# 호스트 변수
+  단일 호스트에서 사용할 수 있는 변수도 설정할 수 있습니다. webserver-host에서 host_var 변수를 사용할 수 있습니다. 
+  children:
+    webservers:
+      hosts:
+        webserver-host1:
+          host_var: "local_var"
+
+
+### module ###
+모듈은 단일 명령어 이자 수행할 작업
+
+  모듈에서 사용 할 수 있는 공통 파라미터 
+	ignore_errors: yes
+	    오류 무시
+	become: yes
+	    root 권한으로 실행
+	when:
+	    조건문 분기
+	tags
+	    실행 태그 추가
+	environment
+	    실행 환경 변수 설정
+
+  ex) hiveserver2 실행 정지 명령 
+	- name: hiveserver2 stop  
+	  shell: systemctl stop hiveserver2  
+	  when: hive_installed.stat.exists  
+	  become: yes  
+	  tags:  
+	    - stop
+	  environment:
+	      http_proxy: "http://proxy_host:proxy_port"
+
+  # file 
+    디렉토리, 파일과 관련된 처리를 할 때 사용하는 모듈 복사, 삭제, 권한 변경 등을 처리
+
+    * 권한 설정
+      mode는 파일의 권한, 모드를 설정 recurse를 이용하여 하위의 모든 디렉토리 권한을 함께 변경
+      ex)
+	  	- name: "copy and Mode 755"
+		  file:
+		    src: "/home/file-a"
+		    dest: "/home/file-b"
+		    mode: 0755
+		    owner: "deploy"
+		    group: "deploy"
+		  become: yes
+
+    * 링크 생성
+      state: link를 이용하여 링크를 생성
+      ex)
+      	- name: "link file-a"
+		  file:
+		    src: "/home/file-a"
+		    dest: "/home/link-file-a"
+		    state: link
+		    owner: "deploy"
+		    group: "deploy"
+		  become: yes
+
+    * 파일 삭제
+      state: absent를 이용하여 파일을 삭제
+      ex)
+      	- name: "delete file-a"
+		  file:
+		    path: "/home/file-a"
+		    state: absent
+
+	* 디렉토리 생성
+	  state: directory를 이용하여 디렉토리를 생성
+	  ex)
+	 	 - name: "make directory dirA"
+		  file:
+		    path: "/home/dirA"
+		    state: directory
+
+	* 0 Byte 파일
+	  state: touch를 이용하여 파일을 생성
+	  ex)
+	  	- name: "touch file"
+		  file:
+		    path: "/home/file-c"
+		    state: touch
+
+  # unarchive 
+	압축을 해제
+	ex)
+	- name: unarchive java file 
+	  unarchive:
+	    src: "OpenJDK8U-jdk_x64_linux_hotspot_8u262b10.tar.gz"
+	    dest: "/usr/lib"
+	    remote_src: True
+	  become: True
+  
+  # copy 
+    copy는 앤서블을 실행하는 서버(제어 노드)의 파일을 원격 서버(매니지드 노드)로 복사
+
+    * 로컬 복사
+      src를 dest 위치로 복사 src는 앤서블이 실행되는 서버의 파일 아래와 같은 경우 scp명령어로 복사하는 것과 동일 처리 
+      ex)
+     	 - name: "copy file"
+		  copy:
+		    src: "file-a"
+		    dest: "/home/file-a"
+
+	* 원격 복사
+	  remote_src가 yes이면 원격 서버의 파일을 복사 become: yes로 설정하면 root 권한으로 파일을 복사
+	  ex)
+	  	- name: "copy file"
+		  copy:
+		    src: "/home/file-a"
+		    dest: "/home/file-b"
+		  remote_src: yes
+		  become: yes
+
+	* with_items를 이용한 리스트 복사
+	  ex)
+	  	- name: copy airflow configs  
+		  copy:  
+		    src: "{{ item }}"  
+		   dest: "/opt/airflow/{{ item }}"  
+		  with_items:  
+		    - airflow.cfg
+
+  # template 
+    template은 파이썬의 jinja2 템플릿을 이용하여 파일을 변환하면서 복사
+    jinja2 템플릿은 인벤토리에서 전달 된 변수와 서버의 정보를 이용하여 설정 파일 등을 호스트에 맞게 변환
+    https://jinja.palletsprojects.com/en/3.0.x/templates/#escaping
+    ex)
+    - name: copy airflow configs  
+	  template:  
+	    src: "{{ item }}"  
+	   dest: "/opt/airflow/{{ item }}"  
+	  with_items:  
+	    - airflow.cfg
+
+	* for 문 처리
+	  {% %} 안에서 루프를 이용하여 값을 변환
+	  ex)
+	  all:
+		  hosts:
+		  children:
+		    tomcat:
+		      sample-url-1:
+		      sample-url-2:
+
+		  vars:
+		    host_ip:
+		      - "192.168.0.1"
+		      - "192.168.0.2"
+
+	  	{% set port = '1234' %}
+		{% set server_ip = [] %}
+
+		# vars 정보를 이용
+		{% for ip in host_ip  %}
+		{{ server_ip.append( ip+":"+port ) }}
+		{% endfor %}
+
+		# 그룹 정보를 이용
+		{% for ip in groups['tomcat']  %}
+		{{ server_ip.append( ip+":"+port ) }}
+		{% endfor %}
+
+  # get_url 
+    get_url은 파일을 다운로드 wget 명령과 동일
+    프록시 설정을 이용해야 하는 경우 environment 를 이용하여 설정
+    ex)
+    - name: download hive file  
+	  get_url:  
+	    url: "http://file-url/hive.tgz"
+	    dest: /home/user/hive.tgz
+	    mode: '0660'
+	  environment:  
+	    https_proxy: http://proxy_url:proxy_port
+
+  # stat 
+    stat은 파일의 상태를 확인 register를 이용해서 파일 파이즈, 존재 여부, 권한 등의 상태를 확인하고 다음 처리에 이용
+
+    * 사이즈 확인
+      ex)file.txt 의 사이즈를 확인하고 0이면 파일을 다운로드 
+      	- stat:  
+		    path: "/home/user/file.txt"  
+		  register: st  
+
+		- name: download file.txt
+		  get_url:  
+		    url: "http://file.txt"  
+		  dest: /home/user
+		    mode: '0660'  
+		  when: "st.stat.size = 0 | int"
+
+  # shell 
+    쉘 명령어를 실행
+
+    * 단일 명령어 실행
+      ex)
+      	# mysql 명령어를 이용하여 쿼리를 실행 
+		- name: execute drop_db query  
+		  shell: |  
+		    mysql -u root < /tmp/drop_db.sql  
+		  become: yes
+
+		# airflow-start.sh 스크립트를 실행 
+		# when: 을 이용하여 조건문을 처리 
+		- name: airflow start  
+		  shell: /opt/airflow/bin/airflow-start.sh all  
+		  when: airflow_installed.stat.exists
+
+	 * 명령어 실행 결과 반환
+	   register를 이용하여 명령어 실행 결과를 저장
+	   ex)
+	    # OS 이름을 저장합니다. 
+		- name: Check os Name  
+		  shell: cat /etc/os-release | egrep ^NAME | awk -F "=" '{ print $2 }' | sed s/\"//g  
+		  register: os_name
+
+     * 멀티라인 명령어
+       |를 이용하여 여러 명령어를 한번에 실행
+       ex)
+      	# systemctl 명령어를 실행 
+		- name: "service systemctl"  
+		  shell: |  
+		    systemctl daemon-reload  
+		    systemctl enable mysql  
+		  become: yes
+
+  # apt 
+    우분투의 apt 설치 명령어를 실행
+
+    * 설치
+      ex)
+      	# 마리아 db 서버 설치 
+		- name: setup db  
+		  apt:  
+		    name: mariadb-server  
+		  become: yes
+
+    * 제거
+      state: absent 옵션을 이용하여 제거
+      ex)
+      	# 마리아 db 서버 제거 
+		- name: delete db  
+		  apt:  
+		    name: mariadb-server  
+		    state: absent
+		  become: yes
+
+	* 업데이트 및 설치
+	  update_cache: yes 를 이용하여 apt를 업데이트 하면서 패키지를 설치
+	  ex)
+	  	# 마리아 db 서버 설치 
+		- name: setup db  
+		  apt:  
+		    name: mariadb-server  
+		    update_cache: yes
+		  become: yes
+
+  # systemd
+    systemctl 명령어를 이용하여 서비스를 실행
+    ex)
+    # 마리아 db 재시작 
+	- name: restart mariadb  
+	  systemd:  
+	    state: restarted  
+	    name: mariadb  
+	  become: yes
+
+  # debug 
+    디버그용 문자열을 출력
+    ex) java -version 명령어 실행결과를 java_result에 저장하고, when 상태에 따라 debug로 출력
+    - name: Install Java
+	  hosts: NEW_VM
+	  tasks:
+	  - name: Check if java is installed
+	    command: java -version
+	    register: java_result
+	    ignore_errors: True
+
+	  - debug:
+	      msg: "Failed - Java is not installed"
+	    when: java_result is failed
+
+	  - debug:
+	      msg: "Success - Java is installed  {{ java_result.stdout }}"
+	    when:  java_result is success
+
+### task ###
+태스크는 모듈의 모음 연속된 동작으로 진행할 작업을 정의 
+  ex) hue 4.10.0 버전의 압축 파일을 다운로드 하고, 압축을 해제한 후, 링크를 거는 태스크
+	- name: download hue file
+	  get_url:
+	    url: "https://cdn.gethue.com/downloads/hue-4.10.0.tgz"
+	    dest: /tmp
+	    mode: '0660'
+
+	- name: unarchive hue file
+	  unarchive:
+	    src: "/tmp/hue-4.10.0.tgz"
+	    dest: "/opt"
+	    remote_src: True
+	    owner: "hue"
+	    group: "hue"
+	  become: True
+
+	- name: "create symlink /opt/hue"
+	  file:
+	    src: "/opt/hue-4.10.0"
+	    dest: /opt/hue
+	    state: link
+	    owner: "hue"
+	    group: "hue"
+	  become: yes
+
+  # 태스크 불러오기 
+    import_tasks, include_tasks를 이용해서 다른 파일의 태스크를 불러올 수 있음 
+    ex)
+    - name: configure NameNode HA
+	  when: "groups['hadoop_namenodes'] | length > 1"
+	  import_tasks: ./configure_hadoop_ha.yaml
+
+
+
 
 
 ########################################################
