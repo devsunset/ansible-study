@@ -74,7 +74,7 @@ Infrastructure as a code (환경의 배포와 구성을 규격화된 코드로 �
 
 		- shell, command, file module은 멱등성 제공하지 않는 모듈임 아래와 같이 멱등성 기반 으로 작성 필요
 		* Non-Idempotent Bash 예시
-		echo“127.0.0.1 localhost”>> /etc/hosts
+		echo “127.0.0.1 localhost”>> /etc/hosts
 		→ /etc/hosts에 항상 내용을 추가함.
 
 		* Idempotent Bash 예시
